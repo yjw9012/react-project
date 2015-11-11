@@ -23,6 +23,7 @@ var TimerApp = React.createClass({
             <div>
                 <TimerView currentTimer={this.state.currentTimer}
                  restartTimer={this.loadTimer}/>
+                <TimerList timerEntries={this.state.timerEntries} loadTimer={this.loadTimer}/>
             </div>
         );
     }
@@ -47,14 +48,25 @@ var TimerView = React.createClass({
         console.log("get new props!");
         // this should only be called once
         // timerUpdater and watcher are both cleared.
-        var nextState = {
-            id: nextProps.currentTimer.id,
-            min: nextProps.currentTimer.min,
-            sec: nextProps.currentTimer.sec,
-            timerUpdater: null,
-            timerWatcher: null
-        }
-        this.setState(nextState, this.runTimer);
+        if (this.state.timerUpdate != null ||
+                this.state.timerWatcher != null) {
+            this.stopTimerUpdate();        
+        };
+        var that = this;
+        setTimeout(
+            function delaySetState() {
+                console.log("Checking timerUpdater and timerWatcher after clearing.");
+                console.log("timerUpdater: " + that.state.timerUpdater);
+                console.log("timerWatcher: " + that.state.timerWatcher);
+                var nextState = {
+                    id: nextProps.currentTimer.id,
+                    min: nextProps.currentTimer.min,
+                    sec: nextProps.currentTimer.sec,
+                    //timerUpdater: null,
+                    //timerWatcher: null
+                };
+                that.setState(nextState, that.runTimer);
+            }, 1000); 
     },
     runTimer: function() {
         console.log("starting timer..");
@@ -123,6 +135,26 @@ var TimerView = React.createClass({
                 <button onClick={this.toggleOnOff}>On/Off</button>
             </div>
         );
+    }
+});
+
+var TimerList = React.createClass({
+    // TODO see if there's a better way for this..
+    applyToCallBack: function(callBack, arg) {
+        callBack(arg); 
+    },
+    render: function() {
+        var that = this;
+        var timerEntries = this.props.timerEntries.map((timerEntry) => {
+            return (
+                <div> 
+                    <span> {timerEntry.name} </span>
+                    <button id={timerEntry.id} 
+                     onClick={that.applyToCallBack.bind(this, that.props.loadTimer, timerEntry.id)}> </button>
+                </div>
+            );
+        });
+        return (<div> {timerEntries} </div>);
     }
 });
 
