@@ -1,0 +1,7 @@
+{
+    timerEntries: [
+        {id:1, name:"advent calendar1", min: 0, sec: 3},
+        {id:2, name:"advent calendar2", min: 0, sec: 5},
+        {id:3, name:"advent calendar3", min: 1, sec: 7}
+    ],
+}

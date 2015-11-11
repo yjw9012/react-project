@@ -1,30 +1,28 @@
 var TimerApp = React.createClass({
     getInitialState: function() {
-        // TODO refactor me!
         return {
             timerEntries: [
                 {id:1, name:"advent calendar1", min: 0, sec: 3},
                 {id:2, name:"advent calendar2", min: 0, sec: 5},
-                {id:3, name:"advent calendar3", min: 1, sec: 7}
+                {id:3, name:"advent calendar3", min: 1, sec: 7}  
             ],
-            id_to_timers: {
-                1: {id:1, name:"advent calendar1", min: 0, sec: 3},
-                2: {id:2, name:"advent calendar2", min: 0, sec: 5},
-                3: {id:3, name:"advent calendar3", min: 0, sec: 7},
-            },
             currentTimer: {id:1, name:"advent calendar1", min: 0, sec: 3},
         };
     },
     loadTimer: function(timerId) {
-        alert("Switching to different timer!");
-        var timer = this.state.id_to_timers[timerId]
-        this.setState({currentTimer: timer});
+        // look up timerEntry by id
+        // the data structure should be changed
+        // to allow faster lookups
+        this.setState({
+            currentTimer: this.state.timerEntries.filter((timerEntry) => {
+                return timerEntry.id == timerId;})[0]
+        });
     },
     render: function() {
         return (
             <div>
-                <TimerView currentTimer={this.state.currentTimer} />
-                <TimerList timerEntries={this.state.timerEntries} loadTimer={this.loadTimer}/>
+                <TimerView currentTimer={this.state.currentTimer}
+                 restartTimer={this.loadTimer}/>
             </div>
         );
     }
@@ -32,109 +30,100 @@ var TimerApp = React.createClass({
 
 var TimerView = React.createClass({
     getInitialState: function() {
+        console.log("get initial state!");
         return {
+            id: this.props.currentTimer.id,
             min: this.props.currentTimer.min,
             sec: this.props.currentTimer.sec,
-            timerUpdater: null, //setInterval object
+            timerUpdater: null,
+            timerWatcher: null
         };
     },
     componentDidMount: function() {
-        this.launchTimer();
+        console.log("component did mount!");
+        this.runTimer();
     },
-
     componentWillReceiveProps: function(nextProps) {
-        console.log("new props!");
+        console.log("get new props!");
+        // this should only be called once
+        // timerUpdater and watcher are both cleared.
         var nextState = {
+            id: nextProps.currentTimer.id,
             min: nextProps.currentTimer.min,
             sec: nextProps.currentTimer.sec,
             timerUpdater: null,
-            timerKiller: null,
+            timerWatcher: null
         }
-        this.resetTimer(nextState);
+        this.setState(nextState, this.runTimer);
     },
-    // TODO rename me
-    resetTimer: function(nextState) {
-        //clearInterval(this.state.timerUpdater);
-        //nextState['timerUpdater'] = null;
-        var killed = true;
-        this.cancelTimer(killed);
-        var that = this;
-        setTimeout(function toRun() {
-            that.setState(nextState, that.launchTimer);
-        }, 2000);
-    },
-    launchTimer: function() {
-        this.startTimer();
-        var endTime = 1000 * ((60 * this.state.min) + this.state.sec) + 1000
-        this.scheduleTimerToEnd(endTime);
-    },
-    startTimer: function() {
-        var timerUpdater = setInterval(this.updateTime, 1000);
+    runTimer: function() {
+        console.log("starting timer..");
+        var timerUpdater = setInterval(this.updateTimer, 1000);
         this.setState({timerUpdater: timerUpdater});
-        //var endTime = 1000 * ((60 * this.state.min) + this.state.sec) + 1000
-        //return timerUpdater
+        var delay = (60 * this.state.min + this.state.sec) * 1000 + 1000
+        console.log("timeOut at " + delay);
+        var timerWatcher = setTimeout(this.stopTimer, delay);
+        this.setState({timerWatcher: timerWatcher});
     },
-    updateTime: function() {
+    updateTimer: function() {
+        console.log("Updating timer with timeUpdater " + 
+                    JSON.stringify(this.state.timerUpdater));
         if (this.state.sec == 0) {
             this.setState({min: this.state.min - 1});
             this.setState({sec: 59});
         } else {
-            this.setState({sec: this.state.sec -1});
+            this.setState({sec: this.state.sec - 1});
         }
-        //alert(this.state.min + " : " + this.state.sec);
     },
-    // TODO review the following two functions
-    scheduleTimerToEnd: function(endTime) {
-        var killed = false;
-        var timerKiller = setTimeout(
-            this.cancelTimer, endTime, killed);
+    pauseTimer: function() {
+        this.stopTimerUpdate();
     },
-    cancelTimer: function(killed) {
-        if (!killed){
-            alert("Timer is up!");
-        }
-        console.log("clearing timer " + this.state.timerUpdater);
+    // TODO rename me?
+    stopTimerUpdate: function() {
+        console.log("Clearing timers...");
         clearInterval(this.state.timerUpdater);
-        clearTimeout(this.state.timerKiller);
-        this.setState({timerUpdater: null, timerKiller: null});
+        clearTimeout(this.state.timerWatcher);
+        var changes = {
+            timerUpdater: null,
+            timerWatcher: null,
+        };
+        this.setState(changes);
+    },
+    stopTimer: function() {
+        this.stopTimerUpdate();
+        /*var changes = {
+            min: 0,
+            sec: 0
+        };
+        this.setState(changes);*/
+    },
+    restartTimer: function() {
+        // TODO
+        this.props.restartTimer(this.state.id);
+    },
+    toggleOnOff: function() {
+        if (this.state.timerUpdater == null && 
+                (this.state.min > 0 || this.state.sec > 0)) {
+            this.runTimer();
+        } else if (this.state.timerUpdater == null) {
+            // TODO handle when timer has already finished
+            //console.log("timer already finished. can't turn on");
+            this.restartTimer();
+        } else {
+            this.pauseTimer();
+        }
     },
     render: function() {
-        return (
+        return(
             <div>
-                Remaining Time:
-                {this.state.min} min {this.state.sec} sec
+                <span>
+                    Remaining Time:
+                    {this.state.min} min {this.state.sec} sec
+                </span>
+                <button onClick={this.toggleOnOff}>On/Off</button>
             </div>
         );
     }
 });
 
-var TimerList = React.createClass({
-    getInitialState: function() {
-        // TODO may remove this
-        return {
-            timerEntries: this.props.timerEntries
-        };
-    },
-    // TODO explain
-    applyToCallBack: function(arg, callBack) {
-        callBack(arg);
-    },
-    render: function() {
-        var that = this;
-        var timerEntries = this.state.timerEntries.map((timerEntry) => {
-            return (
-                <div>
-                    <span> {timerEntry.name} </span>
-                    <button id={timerEntry.id} onClick={that.applyToCallBack.bind(this, timerEntry.id, that.props.loadTimer)}></button>
-                </div>
-            );
-        });
-        // this.props.loadTimer.bind(this, );
-        //<button id={timerEntry.id} onClick={that.loadTimer.bind(this, timerEntry.id)}> </button>
-        return <div>{timerEntries}</div>;
-    }
-});
-
-
-
-React.render(<TimerApp />, document.getElementById("example"));
+React.render(<TimerApp />, document.getElementById('example'));
