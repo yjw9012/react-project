@@ -44,17 +44,28 @@ var TimerView = React.createClass({
         //console.log("component did mount!");
         this.runTimer();
     },
+    timerDidStop: function() {
+        return (this.state.timerUpdater == null &&
+                this.state.timerWatcher == null);
+    },
     componentWillReceiveProps: function(nextProps) {
         //console.log("get new props!");
         if (!this.timerDidStop()) {
             this.stopTimerUpdate();        
         }
-        var nextState = {
-            id: nextProps.currentTimer.id,
-            min: nextProps.currentTimer.min,
-            sec: nextProps.currentTimer.sec,
-        };
-        this.setState(nextState, this.runTimer);
+        var that = this;
+        setTimeout(
+            function delaySetState() {
+                // console.log("Checking timerUpdater and timerWatcher after clearing.");
+                // console.log("timerUpdater: " + that.state.timerUpdater);
+                // console.log("timerWatcher: " + that.state.timerWatcher);
+                var nextState = {
+                    id: nextProps.currentTimer.id,
+                    min: nextProps.currentTimer.min,
+                    sec: nextProps.currentTimer.sec,
+                };
+                that.setState(nextState, that.runTimer);
+            }, 1000); 
     },
     runTimer: function() {
         // console.log("starting timer..");
@@ -74,10 +85,6 @@ var TimerView = React.createClass({
         } else {
             this.setState({sec: this.state.sec - 1});
         }
-    },
-    timerDidStop: function() {
-        return (this.state.timerUpdater == null &&
-                this.state.timerWatcher == null);
     },
     pauseTimer: function() {
         this.stopTimerUpdate();
